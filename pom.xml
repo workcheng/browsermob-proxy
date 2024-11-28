@@ -99,9 +99,14 @@
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.6.1</version>
                     <configuration>
-                        <compilerId>groovy-eclipse-compiler</compilerId>
-                        <source>1.7</source>
-                        <target>1.7</target>
+<!--                        <compilerId>groovy-eclipse-compiler</compilerId>-->
+                        <source>17</source>
+                        <target>17</target>
+                        <encoding>UTF-8</encoding>
+                        <compilerArgs>
+                            <arg>-parameters</arg>
+                            <arg>--add-exports=java.base/sun.security.ssl=ALL-UNNAMED</arg>
+                        </compilerArgs>
                     </configuration>
                     <dependencies>
                         <dependency>
