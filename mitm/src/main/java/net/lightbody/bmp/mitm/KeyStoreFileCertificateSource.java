@@ -8,11 +8,10 @@ import net.lightbody.bmp.mitm.tools.SecurityProviderTool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.KeyStore;
 
@@ -115,17 +114,31 @@ public class KeyStoreFileCertificateSource implements CertificateAndKeySource {
      */
     private CertificateAndKey loadKeyStore() {
         // load the KeyStore from the file or classpath resource, then delegate to a KeyStoreCertificateSource
-        KeyStore keyStore;
+        KeyStore keyStore = null;
         if (keyStoreFile != null) {
             keyStore = securityProviderTool.loadKeyStore(keyStoreFile, keyStoreType, keyStorePassword);
         } else {
             // copy the classpath resource to a temporary file and load the keystore from that temp file
             Path tempKeyStoreFile = null;
             try (InputStream keystoreAsStream = KeyStoreFileCertificateSource.class.getResourceAsStream(keyStoreClasspathResource)) {
-                tempKeyStoreFile = Files.createTempFile("keystore", "temp");
-                Files.copy(keystoreAsStream, tempKeyStoreFile, StandardCopyOption.REPLACE_EXISTING);
+                if (keystoreAsStream == null) {
+                    final Path path = Paths.get(keyStoreClasspathResource);
+                    try (InputStream inputStream = Files.newInputStream(path)) {
+                        tempKeyStoreFile = Files.createTempFile("keystore", "temp");
+                        log.info("Loading keystore from keyStoreClasspathResource:{}:tempKeyStoreFile:{}:path:{}", keyStoreClasspathResource, tempKeyStoreFile, path);
+                        Files.copy(inputStream, tempKeyStoreFile, StandardCopyOption.REPLACE_EXISTING);
 
-                keyStore = securityProviderTool.loadKeyStore(tempKeyStoreFile.toFile(), keyStoreType, keyStorePassword);
+                        keyStore = securityProviderTool.loadKeyStore(tempKeyStoreFile.toFile(), keyStoreType, keyStorePassword);
+                    } catch (IOException e) {
+                        log.warn("error", e);
+                    }
+                } else {
+                    tempKeyStoreFile = Files.createTempFile("keystore", "temp");
+                    log.info("Loading keystore from keyStoreClasspathResource:{}:tempKeyStoreFile:{}", keyStoreClasspathResource, tempKeyStoreFile);
+                    Files.copy(keystoreAsStream, tempKeyStoreFile, StandardCopyOption.REPLACE_EXISTING);
+
+                    keyStore = securityProviderTool.loadKeyStore(tempKeyStoreFile.toFile(), keyStoreType, keyStorePassword);
+                }
             } catch (IOException e) {
                 throw new CertificateSourceException("Unable to open KeyStore classpath resource: " + keyStoreClasspathResource, e);
             } finally {
