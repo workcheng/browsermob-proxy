@@ -3,12 +3,12 @@ package net.lightbody.bmp.util;
 import com.google.common.io.CharStreams;
 import net.lightbody.bmp.mitm.exception.UncheckedIOException;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.Reader;
+import java.io.*;
 import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.stream.Collectors;
 
 /**
  * Utility class for dealing with classpath resources.
@@ -36,8 +36,17 @@ public class ClasspathResourceUtil {
 
         try (InputStream resourceAsStream = ClasspathResourceUtil.class.getResourceAsStream(resource)) {
             if (resourceAsStream == null) {
-                throw new UncheckedIOException(new FileNotFoundException("Unable to locate classpath resource: " + resource));
+                final Path path = Paths.get(resource);
+                try (InputStream inputStream = Files.newInputStream(path)) {
+                    Reader resourceReader = new InputStreamReader(inputStream, charset);
+                    return CharStreams.toString(resourceReader);
+                } catch (IOException e) {
+                    throw new UncheckedIOException(new FileNotFoundException("Unable to locate classpath resource: " + resource + ":path" + path));
+                }
             }
+            /*if (resourceAsStream == null) {
+                throw new UncheckedIOException(new FileNotFoundException("Unable to locate classpath resource: " + resource));
+            }*/
 
             // the classpath resource was found and opened. wrap it in a Reader and return its contents.
             Reader resourceReader = new InputStreamReader(resourceAsStream, charset);
